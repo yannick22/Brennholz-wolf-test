@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Brennholz Wolf – Lagerverwaltung</title>
+<style>
+:root{--bg:#f4f1ea;--card:#fff;--text:#2b241c;--muted:#766b5d;--accent:#6b4324;--accent2:#9a6b3f;--ok:#2f7d4a;--danger:#b64035;--line:#e5ded3}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{background:#2f241b;color:white;padding:18px 20px;position:sticky;top:0;z-index:5}
+.brand{font-size:23px;font-weight:800}.sub{font-size:12px;opacity:.75;margin-top:3px}
+nav{display:flex;gap:7px;overflow:auto;padding:10px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:73px;z-index:4}
+nav button{border:0;background:#eee7de;color:#493b2d;padding:11px 14px;border-radius:10px;font-weight:700;white-space:nowrap}
+nav button.active{background:var(--accent);color:white}
+main{max-width:1100px;margin:auto;padding:18px}.tab{display:none}.tab.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 2px 8px #00000008}
+.metric{font-size:30px;font-weight:800;margin-top:7px}.muted{color:var(--muted);font-size:13px}
+h2{margin:4px 0 14px}h3{margin:0 0 10px}
+button,.btn{cursor:pointer}.primary{background:var(--accent);color:#fff;border:0;padding:11px 15px;border-radius:10px;font-weight:700}.secondary{background:#eee7de;color:#493b2d;border:0;padding:10px 13px;border-radius:10px;font-weight:700}.danger{background:#b64035;color:#fff;border:0;padding:10px 13px;border-radius:10px;font-weight:700}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.field label{display:block;font-size:12px;font-weight:700;margin-bottom:5px;color:var(--muted)}input,select{width:100%;padding:10px;border:1px solid #d8cec0;border-radius:9px;background:white;font-size:15px}.full{grid-column:1/-1}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px 7px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-size:12px}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#eee7de}.ok{background:#dcefe2;color:#23643b}.warn{background:#fff0cc;color:#805d16}.low{background:#f8d9d6;color:#8d3028}
+.delivery-status{min-width:115px;padding:8px;font-weight:700}.delivery-status.offen{background:#fff0cc;color:#805d16}.delivery-status.bezahlt{background:#dcefe2;color:#23643b}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.hidden{display:none}
+.modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal.open{display:flex}.modalbox{background:#fff;border-radius:18px;max-width:600px;width:100%;padding:20px;max-height:90vh;overflow:auto}
+#reader{width:100%;min-height:250px;border:1px dashed #bbb;border-radius:12px;overflow:hidden}.note{background:#f8f4ed;padding:11px;border-radius:10px;font-size:13px}
+@media(max-width:650px){main{padding:12px}nav{top:73px}.metric{font-size:25px}table{font-size:12px}}
+
+.qr-label-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.qr-label{border:2px solid #ddd;border-radius:14px;padding:14px;text-align:center;background:#fff}
+.qr-label img,.qr-label canvas{max-width:170px;margin:10px auto}
+.qr-label .batch{font-size:18px;font-weight:800}
+@media print{
+ body *{visibility:hidden!important}
+ #labels,#labels *{visibility:visible!important}
+ #labels{position:absolute;left:0;top:0;width:100%}
+ #labels .no-print{display:none!important}
+ .qr-label-grid{grid-template-columns:repeat(3,1fr);gap:8mm}
+ .qr-label{break-inside:avoid;border:1px solid #000}
+}
+</style>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#2a4d36"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Brennholz Wolf"><link rel="apple-touch-icon" href="icon-192.png">
+<style>
+#loginGate{position:fixed;inset:0;background:#f4f1e8;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{width:min(430px,100%);background:#fff;border:1px solid #ddd5c7;border-radius:18px;padding:24px;box-shadow:0 15px 45px #0002}
+.login-card h1{margin:0 0 5px}.login-card input{width:100%;box-sizing:border-box;margin:7px 0 12px;padding:13px;border:1px solid #bbb;border-radius:10px;font-size:16px}
+#loginError{color:#a11;min-height:22px}.login-meta{font-size:13px;color:#666}
+#cloudBar{display:none;padding:8px 14px;background:#e9f5ec;border-bottom:1px solid #c9dfcf;font-size:13px}
+</style>
+</head>
+<body>
+<div id="loginGate">
+ <div class="login-card">
+  <h1>🪵 Brennholz Wolf</h1>
+  <p>Bitte anmelden</p>
+  <label>E-Mail</label><input id="loginEmail" type="email" autocomplete="username">
+  <label>Passwort</label><input id="loginPassword" type="password" autocomplete="current-password">
+  <button class="primary" style="width:100%" onclick="bwLogin()">🔐 Anmelden</button>
+  <button class="secondary" style="width:100%;margin-top:8px" onclick="bwRequestRecovery()">Passwort vergessen?</button>
+  <div id="recoveryForm" style="display:none">
+   <p><strong>Neues Passwort vergeben</strong></p>
+   <label>Neues Passwort (mindestens 8 Zeichen)</label><input id="newPassword" type="password" autocomplete="new-password">
+   <label>Passwort wiederholen</label><input id="newPasswordRepeat" type="password" autocomplete="new-password">
+   <button class="primary" style="width:100%" onclick="bwUpdatePassword()">Neues Passwort speichern</button>
+  </div>
+  <div id="loginError"></div>
+  <div class="login-meta">Deine Geschäftsdaten werden nach der Anmeldung mit Supabase synchronisiert.</div>
+ </div>
+</div>
+<div id="cloudBar">☁️ <span id="cloudStatus">Supabase wird verbunden…</span> · <button class="secondary" onclick="bwLogout()">Abmelden</button></div>
+
+<header><div class="brand">🪵 Brennholz Wolf</div><div class="sub">Lagerverwaltung · TEST: Cloud-Liefertermine (nicht veröffentlichen)</div></header>
+<nav>
+<button class="active" data-tab="home">🏠 Start</button>
+<button data-tab="stock">🪵 Bestand</button>
+<button data-tab="moisture">💧 Feuchte</button>
+<button data-tab="sales">💶 Verkauf</button>
+<button data-tab="qr">📷 QR-Scanner</button>
+<button data-tab="labels">🏷️ QR-Codes</button>
+<button data-tab="deliveries">🚚 Liefertermine</button>
+</nav>
+<main>
+<section id="home" class="tab active">
+<h2>Übersicht</h2>
+<div class="grid" id="metrics"></div>
+<div class="card" style="margin-top:14px"><h3>Bestand</h3><div id="homeStock"></div></div>
+</section>
+
+<section id="stock" class="tab">
+<h2>Holzbestand</h2>
+<div class="card">
+<form id="stockForm">
+<div class="field"><label>Holzart</label><input id="wood" required placeholder="z. B. Buche"></div>
+<div class="field"><label>Länge</label><select id="length"><option>25 cm</option><option>30 cm</option><option>40 cm</option><option>50 cm</option><option>1 m</option></select></div>
+<div class="field"><label>Menge (SRM)</label><input id="qty" type="number" step="0.01" min="0" required></div>
+<div class="field"><label>Feuchte %</label><input id="moist" type="number" step="0.1" min="0" max="100"></div>
+<div class="field"><label>Lagerplatz</label><input id="place" placeholder="z. B. Halle 1"></div>
+<div class="field"><label>Verkauf €/SRM</label><input id="price" type="number" step="0.01" min="0"></div>
+<div class="field"><label>Einkauf €/RM laut Rechnung</label><input id="costRm" type="number" step="0.01" min="0" placeholder="z. B. 72"></div>
+<div class="field"><label>Charge</label><input id="batch" placeholder="z. B. BUCHE-25-001"></div>
+<div class="actions full"><button class="primary">+ Bestand anlegen</button></div>
+</form>
+</div>
+<div class="card" style="margin-top:14px;overflow:auto"><div id="stockTable"></div></div>
+</section>
+
+<section id="moisture" class="tab">
+<h2>Feuchte-Verlauf</h2>
+<div class="card"><div class="note">Wähle eine Charge und trage täglich die gemessene Holzfeuchte ein. Datum und Uhrzeit werden automatisch gespeichert.</div>
+<div class="grid" style="margin-top:12px">
+<div class="field"><label>Charge</label><select id="moistBatch"></select></div>
+<div class="field"><label>Feuchte %</label><input id="moistValue" type="number" step="0.1" min="0" max="100"></div>
+<div class="actions" style="align-items:end"><button class="primary" onclick="addMoisture()">Feuchte speichern</button></div>
+</div></div>
+<div class="card" style="margin-top:14px"><div id="moistureTable"></div></div>
+</section>
+
+<section id="sales" class="tab">
+<h2>Verkauf</h2>
+<div class="card"><form id="saleForm">
+<div class="field"><label>Holzart / Charge</label><select id="saleBatch" required></select></div>
+<div class="field"><label>Menge (SRM)</label><input id="saleQty" type="number" step="0.01" min="0.01" required></div>
+<div class="field"><label>Preis €/SRM</label><input id="salePrice" type="number" step="0.01" min="0" required></div>
+<div class="field"><label>Gesamtsumme €</label><input id="saleTotal" type="text" readonly value="0,00 €"></div>
+<div class="field"><label>Notiz</label><input id="saleNote" placeholder="z. B. Kunde / Barzahlung"></div>
+<div class="full muted" id="saleAvailable"></div>
+<div class="actions full"><button class="primary">+ Verkauf buchen</button></div>
+</form></div>
+<div class="grid" id="salesMetrics" style="margin-top:14px"></div>
+<div class="card" style="margin-top:14px;overflow:auto"><h3>Gesamtsummen nach Holzart</h3><div id="salesByWood"></div></div>
+<div class="card" style="margin-top:14px;overflow:auto"><h3>Gebuchte Verkäufe</h3><div id="salesTable"></div></div>
+</section>
+
+<section id="deliveries" class="tab">
+<h2>Liefertermine – Testversion</h2><p class="note">Test: Neu anlegen und Zahlungsstatus werden direkt in Supabase gespeichert. Bearbeiten und Löschen sind gesperrt. Holzbestand und Verkäufe synchronisieren weiterhin nicht. Bitte erst nach Prüfung veröffentlichen.</p>
+<div class="card">
+<form id="deliveryForm">
+<div class="field"><label>Kunde</label><input id="dCustomer" required placeholder="z. B. Max Mustermann"></div>
+<div class="field"><label>Lieferdatum</label><input id="dDate" type="date" required></div>
+<div class="field"><label>Uhrzeit</label><input id="dTime" type="time"></div>
+<div class="field"><label>Adresse</label><input id="dAddress" placeholder="Straße, PLZ Ort"></div>
+<div class="field"><label>Telefon</label><input id="dPhone" type="tel" placeholder="optional"></div>
+<div class="field"><label>Holz / Länge</label><select id="dWood"><option value="">Bitte auswählen</option></select></div>
+<div class="field"><label>Menge (SRM)</label><input id="dQty" type="number" step="0.01" min="0" placeholder="z. B. 5"></div>
+<div class="field"><label>Status</label><select id="dStatus"><option value="offen">🟠 Offen</option><option value="bezahlt">🟢 Bezahlt</option></select></div>
+<div class="field"><label>Notiz</label><input id="dNote" placeholder="z. B. Barzahlung / 380 € inkl. Lieferung"></div>
+<div class="actions full"><button class="primary">+ Liefertermin speichern</button></div>
+</form>
+</div>
+<div class="card" style="margin-top:14px"><h3>Nächste Lieferungen</h3><div class="note" style="margin-bottom:12px">📅 Tippe beim Termin einmal auf <b>iPhone-Kalender</b> und bestätige auf dem iPhone mit „Hinzufügen“. Die Erinnerung ist automatisch auf den Vortag um 12:00 Uhr eingestellt.</div><div id="deliveryTable"></div></div>
+</section>
+
+<section id="qr" class="tab">
+<h2>QR-Scanner</h2>
+<div class="card">
+<div class="note">Für den Kamerazugriff muss die Web-App über <b>HTTPS</b> oder <b>localhost</b> geöffnet werden. Alternativ kannst du unten eine Charge auswählen.</div>
+<div class="actions"><button class="primary" onclick="startScanner()">📷 Kamera starten</button><button class="secondary" onclick="stopScanner()">Stop</button></div>
+<div id="reader" style="margin-top:12px"></div>
+<div class="grid" style="margin-top:12px">
+<div class="field"><label>Oder Charge auswählen</label><select id="qrBatch" onchange="showQrCharge()"></select></div>
+</div>
+<div class="actions" style="margin-top:12px"><button class="secondary" onclick="printAllQr()">🖨️ QR-Etiketten drucken</button></div>
+<div id="qrResult" style="margin-top:12px"></div>
+<div id="qrLabels" class="hidden"></div>
+</div>
+</section>
+
+<section id="labels" class="tab">
+  <h2>🏷️ QR-Codes & Etiketten</h2>
+  <div class="card no-print">
+    <div class="note">Hier bekommst du für jede Holz-Charge einen eigenen QR-Code. Ausdrucken, ausschneiden und an Gitterbox, Palette oder Holzstapel befestigen.</div>
+    <div class="actions" style="margin-top:12px">
+      <button class="primary" onclick="renderQRLabels()">🔄 QR-Codes aktualisieren</button>
+      <button class="secondary" onclick="window.print()">🖨️ Alle Etiketten drucken</button>
+    </div>
+  </div>
+  <div id="qrLabelGrid" class="qr-label-grid" style="margin-top:14px"></div>
+</section>
+
+</main>
+
+<div class="modal" id="editModal"><div class="modalbox">
+<h2>Charge bearbeiten</h2><div id="editContent"></div><div class="actions"><button class="primary" onclick="saveEdit()">Speichern</button><button class="secondary" onclick="closeEdit()">Abbrechen</button></div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+let stock = JSON.parse(localStorage.getItem('bw_stock')||'null') || [
+ {id:'BUCHE-25-001',wood:'Buche',length:'25 cm',qty:18.5,moist:28,place:'Halle 1',price:120,history:[{date:'2026-09-19T09:00:00',value:28}]},
+ {id:'ESCHE-25-001',wood:'Esche',length:'25 cm',qty:7,moist:24,place:'Halle 1',price:110,history:[{date:'2026-09-19T09:05:00',value:24}]},
+ {id:'HAIN-30-001',wood:'Hainbuche',length:'30 cm',qty:12,moist:35,place:'Halle 2',price:100,history:[{date:'2026-09-19T09:10:00',value:35}]},
+ {id:'FICHTE-30-001',wood:'Fichte',length:'30 cm',qty:9,moist:22,place:'Halle 2',price:75,history:[{date:'2026-09-19T09:15:00',value:22}]}
+];
+let moves = JSON.parse(localStorage.getItem('bw_moves')||'[]');
+let deliveries = JSON.parse(localStorage.getItem('bw_deliveries')||'[]'), currentEdit=null, scanner=null;
+function save(){localStorage.setItem('bw_stock',JSON.stringify(stock));localStorage.setItem('bw_moves',JSON.stringify(moves));localStorage.setItem('bw_deliveries',JSON.stringify(deliveries));render();}
+function fmt(n){return Number(n||0).toFixed(2).replace('.',',')}
+function eur(n){return fmt(n)+' €'}
+const RM_TO_SRM=1.4;
+function costRmToSrm(v){return Number(v||0)/RM_TO_SRM}
+function costSrmToRm(v){return Number(v||0)*RM_TO_SRM}
+function total(){return stock.reduce((a,b)=>a+Number(b.qty||0),0)}
+function render(){
+ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.getElementById(b.dataset.tab).classList.add('active'); if(b.dataset.tab==='qr')fillSelects();});
+ document.getElementById('metrics').innerHTML=[
+  ['Gesamtbestand',fmt(total())+' SRM','🪵'],
+  ['Holzsorten',new Set(stock.map(x=>x.wood)).size,'🌲'],
+  ['Chargen',stock.length,'📦'],
+  ['Verkäufe',moves.filter(m=>m.type==='out').length,'💶'],
+  ['Liefertermine',deliveries.filter(d=>d.status!=='erledigt'&&d.status!=='storniert').length,'🚚']
+ ].map(x=>`<div class="card"><div class="muted">${x[2]} ${x[0]}</div><div class="metric">${x[1]}</div></div>`).join('');
+ let rows=stock.map(x=>`<tr><td><b>${x.wood}</b><br><span class="muted">${x.id}</span></td><td>${x.length}</td><td><b>${fmt(x.qty)} SRM</b></td><td>${x.moist==null?'–':x.moist+' %'}</td><td>${x.place||'–'}</td><td>${eur(costSrmToRm(x.cost||0))}</td><td>${eur(x.price||0)}</td><td><div class="actions"><button class="secondary" onclick="editStock('${x.id}')">Bearbeiten</button><button class="danger" onclick="deleteStock('${x.id}')">🗑️ Löschen</button></div></td></tr>`).join('');
+ document.getElementById('stockTable').innerHTML=`<table><thead><tr><th>Holz / Charge</th><th>Länge</th><th>Bestand</th><th>Feuchte</th><th>Lager</th><th>Einkauf/RM</th><th>Verkauf/SRM</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan=8>Keine Chargen vorhanden.</td></tr>'}</tbody></table>`;
+ document.getElementById('homeStock').innerHTML=`<table><thead><tr><th>Holz</th><th>Bestand</th><th>Feuchte</th><th>Status</th></tr></thead><tbody>${stock.map(x=>`<tr><td>${x.wood} ${x.length}</td><td>${fmt(x.qty)} SRM</td><td>${x.moist??'–'} %</td><td>${x.qty<5?'<span class="badge low">Niedrig</span>':'<span class="badge ok">OK</span>'}</td></tr>`).join('')}</tbody></table>`;
+ fillSelects(); renderMoisture(); renderSales(); renderDeliveries(); if(typeof renderQRLabels==='function') renderQRLabels();
+}
+function fillSelects(){
+ ['moistBatch','saleBatch','qrBatch'].forEach(id=>{let s=document.getElementById(id);if(!s)return;let old=s.value;s.innerHTML=stock.map(x=>`<option value="${x.id}">${x.wood} ${x.length} – ${x.id}</option>`).join('');if(stock.some(x=>x.id===old))s.value=old;});
+ let d=document.getElementById('dWood');
+ if(d){
+   let old=d.value;
+   let choices=[...new Set(stock.map(x=>`${x.wood} ${x.length}`.trim()))];
+   d.innerHTML='<option value="">Bitte auswählen</option>'+choices.map(v=>`<option value="${v}">${v}</option>`).join('');
+   if(choices.includes(old))d.value=old;
+ }
+ let saleBatch=document.getElementById('saleBatch'),saleQty=document.getElementById('saleQty'),salePrice=document.getElementById('salePrice');
+ if(saleBatch){saleBatch.onchange=()=>setSaleDefaults(true);saleQty.oninput=updateSaleTotal;salePrice.oninput=updateSaleTotal;setSaleDefaults(false)}
+}
+document.getElementById('deliveryForm').onsubmit=async e=>{
+ e.preventDefault();
+ if(!bwCloudReady){alert('Bitte zuerst mit Supabase verbinden. Es wurde nichts gespeichert.');return;}
+ const btn=e.target.querySelector('button.primary'); btn.disabled=true;
+ const match=dWood.value.trim().match(/^(.*?)(?:\s+(\d+)\s*cm)?$/);
+ const payload={kunde:dCustomer.value.trim(),datum:dDate.value,uhrzeit:dTime.value||null,adresse:dAddress.value.trim(),telefon:dPhone.value.trim(),holzart:match?.[1]?.trim()||null,scheitlaenge_cm:match?.[2]?Number(match[2]):null,menge_srm:dQty.value?Number(dQty.value):null,status:dStatus.value,notiz:dNote.value.trim()};
+ try{
+   // Nur eine neue Zeile anlegen. Bestehende Tabellen bleiben unverändert.
+   await bwRest('liefertermine','',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(payload)});
+   await bwLoadCloud(); e.target.reset();setDeliveryDefaultDate();alert('Liefertermin in Supabase gespeichert.');
+ }catch(err){alert('Nicht in Supabase gespeichert: '+err.message+'\nBitte nicht erneut anlegen, bevor du in Supabase geprüft hast, ob der Termin schon vorhanden ist.');}
+ finally{btn.disabled=false;}
+};
+function setDeliveryDefaultDate(){let el=document.getElementById('dDate');if(el&&!el.value){let d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());el.value=d.toISOString().slice(0,10)}}
+function deliveryStatusSelect(d){let status=d.status==='bezahlt'?'bezahlt':'offen';return `<select class="delivery-status ${status}" aria-label="Zahlungsstatus für ${d.customer||'Lieferung'}" onchange="changeDeliveryStatus('${d.id}',this.value)"><option value="offen"${status==='offen'?' selected':''}>🟠 Offen</option><option value="bezahlt"${status==='bezahlt'?' selected':''}>🟢 Bezahlt</option></select>`}
+async function changeDeliveryStatus(id,status){
+ const d=deliveries.find(x=>String(x.id)===String(id)); if(!d)return;
+ if(!bwCloudReady){alert('Keine Cloud-Verbindung. Änderung nicht gespeichert.');render();return;}
+ const wanted=status==='bezahlt'?'bezahlt':'offen';
+ try{
+  const rows=await bwRest('liefertermine','id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({status:wanted})});
+  if(!Array.isArray(rows)||rows.length!==1)throw new Error('Keine passende Zeile aktualisiert. Berechtigung und ID prüfen.');
+  d.status=wanted;save();bwSetStatus('Zahlungsstatus in Supabase gespeichert');
+ }catch(err){alert('Zahlungsstatus nicht gespeichert: '+err.message);render();}
+}
+function renderDeliveries(){let el=document.getElementById('deliveryTable');if(!el)return;let sorted=deliveries.slice().sort((a,b)=>((a.date||'9999-99-99')+' '+(a.time||'23:59')).localeCompare((b.date||'9999-99-99')+' '+(b.time||'23:59')));el.innerHTML=`<table><thead><tr><th>Datum / Zeit</th><th>Kunde</th><th>Adresse</th><th>Holz</th><th>Menge</th><th>Status</th><th>Notiz</th><th></th></tr></thead><tbody>${sorted.map(d=>`<tr><td><b>${d.date?new Date(d.date+'T00:00:00').toLocaleDateString('de-DE'):'–'}</b><br>${d.time||'–'}</td><td><b>${d.customer}</b>${d.phone?'<br><span class="muted">'+d.phone+'</span>':''}</td><td>${d.address||'–'}</td><td>${d.wood||'–'}</td><td>${d.qty==null?'–':fmt(d.qty)+' SRM'}</td><td>${deliveryStatusSelect(d)}</td><td>${d.note||'–'}</td><td><div class="actions"><button class="secondary" onclick="downloadDeliveryCalendar('${d.id}')">📅 iPhone-Kalender</button><button class="secondary" onclick="editDelivery('${d.id}')">Bearbeiten</button><button class="danger" onclick="deleteDelivery('${d.id}')">Löschen</button></div></td></tr>`).join('')||'<tr><td colspan=8>Noch keine Liefertermine.</td></tr>'}</tbody></table>`}
+function icsEscape(v){return String(v??'').replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;')}
+function icsUtc(d){return d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z')}
+function icsLocal(d){const p=n=>String(n).padStart(2,'0');return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'T'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds())}
+function downloadDeliveryCalendar(id){
+ let d=deliveries.find(x=>x.id===id);if(!d||!d.date)return alert('Bitte zuerst ein Lieferdatum eintragen.');
+ let time=/^\d{2}:\d{2}$/.test(d.time||'')?d.time:'09:00',start=new Date(d.date+'T'+time+':00');if(Number.isNaN(start.getTime()))return alert('Das Lieferdatum ist ungültig.');
+ let end=new Date(start.getTime()+60*60*1000),reminder=new Date(d.date+'T12:00:00');reminder.setDate(reminder.getDate()-1);
+ let details=[d.wood||'',d.qty==null?'':fmt(d.qty)+' SRM',d.phone?'Telefon: '+d.phone:'',d.note||''].filter(Boolean).join(' · ');
+ let lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Brennholz Wolf//Liefertermine//DE','CALSCALE:GREGORIAN','METHOD:PUBLISH','BEGIN:VEVENT','UID:'+icsEscape(d.id)+'@brennholz-wolf','DTSTAMP:'+icsUtc(new Date()),'DTSTART;TZID=Europe/Berlin:'+icsLocal(start),'DTEND;TZID=Europe/Berlin:'+icsLocal(end),'SUMMARY:'+icsEscape('Brennholz liefern – '+(d.customer||'Kunde')),'LOCATION:'+icsEscape(d.address||''),'DESCRIPTION:'+icsEscape(details),'BEGIN:VALARM','TRIGGER;VALUE=DATE-TIME:'+icsUtc(reminder),'ACTION:DISPLAY','DESCRIPTION:'+icsEscape('Morgen Brennholz liefern – '+(d.customer||'Kunde')),'END:VALARM','END:VEVENT','END:VCALENDAR'];
+ let blob=new Blob([lines.join('\r\n')+'\r\n'],{type:'text/calendar;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Lieferung-'+(d.date||'Termin')+'-'+String(d.customer||'Kunde').replace(/[^a-z0-9äöüß-]+/gi,'-')+'.ics';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function editDelivery(id){alert('Liefertermin bearbeiten ist in dieser Testversion noch gesperrt, damit keine Daten verloren gehen.');}
+function deleteDelivery(id){alert('Löschen ist in dieser Testversion aus Sicherheitsgründen gesperrt.');}
+
+document.getElementById('stockForm').onsubmit=e=>{e.preventDefault();let id=document.getElementById('batch').value.trim()||`${document.getElementById('wood').value.toUpperCase().replace(/\\s+/g,'-')}-${Date.now().toString().slice(-4)}`;if(stock.some(x=>x.id===id)){alert('Diese Charge gibt es bereits.');return}stock.push({id,wood:document.getElementById('wood').value.trim(),length:document.getElementById('length').value,qty:+document.getElementById('qty').value,moist:document.getElementById('moist').value===''?null:+document.getElementById('moist').value,place:document.getElementById('place').value.trim(),price:+document.getElementById('price').value||0,cost:costRmToSrm(document.getElementById('costRm').value),history:[]});let s=stock.at(-1);if(s.moist!=null)s.history.push({date:new Date().toISOString(),value:s.moist});e.target.reset();save();};
+function addMoisture(){let id=document.getElementById('moistBatch').value,v=+document.getElementById('moistValue').value;if(!id||Number.isNaN(v)||v<0||v>100)return alert('Bitte eine gültige Feuchte zwischen 0 und 100 % eingeben.');let x=stock.find(a=>a.id===id);x.moist=v;x.history=x.history||[];x.history.push({date:new Date().toISOString(),value:v});document.getElementById('moistValue').value='';save();if(document.getElementById('qrBatch').value===id)showQrCharge();}
+function setSaleDefaults(force=false){let s=document.getElementById('saleBatch'),p=document.getElementById('salePrice'),a=document.getElementById('saleAvailable');if(!s||!p)return;let x=stock.find(v=>v.id===s.value);if(!x){if(a)a.textContent='Kein Holzbestand vorhanden.';return}if(force||p.value==='')p.value=Number(x.price||0).toFixed(2);if(a)a.textContent=`Verfügbarer Bestand: ${fmt(x.qty)} SRM`;updateSaleTotal()}
+function updateSaleTotal(){let q=Number(document.getElementById('saleQty')?.value||0),p=Number(document.getElementById('salePrice')?.value||0),t=document.getElementById('saleTotal');if(t)t.value=eur(q*p)}
+document.getElementById('saleForm').onsubmit=e=>{e.preventDefault();let id=document.getElementById('saleBatch').value,q=Number(document.getElementById('saleQty').value),salePrice=Number(document.getElementById('salePrice').value),x=stock.find(a=>a.id===id);if(!x)return alert('Bitte eine Holzart auswählen.');if(!Number.isFinite(q)||q<=0)return alert('Bitte eine gültige Menge eingeben.');if(q>Number(x.qty))return alert('Nicht genug Bestand. Verfügbar: '+fmt(x.qty)+' SRM');if(!Number.isFinite(salePrice)||salePrice<0)return alert('Bitte einen gültigen Preis je SRM eingeben.');let income=q*salePrice;x.qty-=q;moves.unshift({date:new Date().toISOString(),id,type:'out',qty:q,income,salePricePerSrm:salePrice,costPerSrm:Number(x.cost||0),note:document.getElementById('saleNote').value.trim()});e.target.reset();save();setSaleDefaults(true)};
+function renderSales(){let metrics=document.getElementById('salesMetrics'),byWood=document.getElementById('salesByWood'),table=document.getElementById('salesTable');if(!metrics||!byWood||!table)return;let sales=moves.map((m,index)=>({m,index})).filter(v=>v.m.type==='out'),sold=sales.reduce((s,v)=>s+Number(v.m.qty||0),0),revenue=sales.reduce((s,v)=>s+Number(v.m.income||0),0);metrics.innerHTML=[['Verkäufe',sales.length,'🧾'],['Verkaufte Menge',fmt(sold)+' SRM','🪵'],['Gesamtsumme',eur(revenue),'💶']].map(v=>`<div class="card"><div class="muted">${v[2]} ${v[0]}</div><div class="metric">${v[1]}</div></div>`).join('');let groups={};for(const {m} of sales){let x=stock.find(s=>s.id===m.id),name=x?`${x.wood} ${x.length}`:m.id;if(!groups[name])groups[name]={qty:0,total:0};groups[name].qty+=Number(m.qty||0);groups[name].total+=Number(m.income||0)}byWood.innerHTML=`<table><thead><tr><th>Holzart</th><th>Verkaufte Menge</th><th>Gesamtsumme</th></tr></thead><tbody>${Object.entries(groups).map(([name,g])=>`<tr><td><b>${name}</b></td><td>${fmt(g.qty)} SRM</td><td><b>${eur(g.total)}</b></td></tr>`).join('')||'<tr><td colspan=3>Noch keine Verkäufe.</td></tr>'}</tbody></table>`;table.innerHTML=`<table><thead><tr><th>Datum</th><th>Holzart / Charge</th><th>Menge</th><th>Preis/SRM</th><th>Gesamtsumme</th><th>Notiz</th><th></th></tr></thead><tbody>${sales.map(({m,index})=>{let x=stock.find(s=>s.id===m.id),q=Number(m.qty||0),price=q?Number(m.salePricePerSrm??Number(m.income||0)/q):0;return `<tr><td>${new Date(m.date).toLocaleString('de-DE')}</td><td><b>${x?x.wood+' '+x.length:m.id}</b><br><span class="muted">${m.id}</span></td><td>${fmt(q)} SRM</td><td>${eur(price)}</td><td><b>${eur(m.income||0)}</b></td><td>${m.note||'–'}</td><td><button class="danger" onclick="deleteSale(${index})">Löschen</button></td></tr>`}).join('')||'<tr><td colspan=7>Noch keine Verkäufe.</td></tr>'}</tbody></table>`}
+function deleteSale(index){let m=moves[index];if(!m||m.type!=='out')return;let x=stock.find(s=>s.id===m.id),q=Number(m.qty||0);if(!x)return alert('Die zugehörige Charge wurde nicht gefunden.');if(!confirm(`Verkauf über ${fmt(q)} SRM und ${eur(m.income||0)} wirklich löschen?\n\nDie Menge wird wieder zum Bestand hinzugefügt.`))return;x.qty+=q;moves.splice(index,1);save()}
+function renderMoisture(){let all=[];stock.forEach(x=>(x.history||[]).slice().reverse().forEach(h=>all.push({id:x.id,wood:x.wood,date:h.date,value:h.value})));document.getElementById('moistureTable').innerHTML=`<table><thead><tr><th>Datum</th><th>Charge</th><th>Holz</th><th>Feuchte</th></tr></thead><tbody>${all.slice(0,100).map(h=>`<tr><td>${new Date(h.date).toLocaleString('de-DE')}</td><td>${h.id}</td><td>${h.wood}</td><td><b>${h.value} %</b></td></tr>`).join('')||'<tr><td colspan=4>Noch keine Messungen.</td></tr>'}</tbody></table>`}
+function deleteStock(id){
+ let x=stock.find(a=>a.id===id);
+ if(!x)return;
+ if(!confirm(`Bestand "${x.wood} ${x.length}" / Charge "${x.id}" wirklich löschen?\n\nDie Charge wird aus dem aktuellen Bestand entfernt.`))return;
+ stock=stock.filter(a=>a.id!==id);
+ const names=JSON.parse(localStorage.getItem('bw_qr_names')||'{}');
+ delete names[id];
+ localStorage.setItem('bw_qr_names',JSON.stringify(names));
+ save();
+}
+function editStock(id){let x=stock.find(a=>a.id===id);currentEdit=id;document.getElementById('editContent').innerHTML=`<form id="editForm"><div class="field"><label>Charge</label><input id="eId" value="${x.id}" disabled></div><div class="field"><label>Holzart</label><input id="eWood" value="${x.wood}"></div><div class="field"><label>Länge</label><input id="eLength" value="${x.length}"></div><div class="field"><label>Bestand SRM</label><input id="eQty" type="number" step=".01" value="${x.qty}"></div><div class="field"><label>Feuchte %</label><input id="eMoist" type="number" step=".1" value="${x.moist??''}"></div><div class="field"><label>Lagerplatz</label><input id="ePlace" value="${x.place||''}"></div><div class="field"><label>Einkauf €/RM laut Rechnung</label><input id="eCostRm" type="number" step=".01" value="${costSrmToRm(x.cost||0).toFixed(2)}"></div><div class="field"><label>Verkauf €/SRM</label><input id="ePrice" type="number" step=".01" value="${x.price||0}"></div></form>`;document.getElementById('editModal').classList.add('open')}
+function closeEdit(){document.getElementById('editModal').classList.remove('open')}
+function saveEdit(){let x=stock.find(a=>a.id===currentEdit);x.wood=eWood.value;x.length=eLength.value;x.qty=+eQty.value;x.moist=eMoist.value===''?null:+eMoist.value;x.place=ePlace.value;x.cost=costRmToSrm(eCostRm.value);x.price=+ePrice.value||0;closeEdit();save()}
+function showQrCharge(){let x=stock.find(a=>a.id===qrBatch.value);if(!x)return;document.getElementById('qrResult').innerHTML=`<div class="card"><h3>${x.wood} – ${x.length}</h3><p><b>Charge:</b> ${x.id}<br><b>Bestand:</b> ${fmt(x.qty)} SRM<br><b>Feuchte:</b> ${x.moist??'–'} %</p><div class="actions"><button class="primary" onclick="openSaleFromQr('${x.id}')">💶 Verkauf buchen</button><button class="secondary" onclick="openMoistureFromQr('${x.id}')">💧 Feuchte eintragen</button><button class="secondary" onclick="printQr('${x.id}')">🖨️ QR drucken</button></div><div id="qrCode-${x.id}" style="margin-top:15px"></div><div class="note" style="margin-top:12px">Der QR-Code enthält nur die Chargen-Nummer. Beim Scannen wird diese Charge in der App geöffnet.</div></div>`;setTimeout(()=>makeQr(x),50)}
+function makeQr(x){let el=document.getElementById('qrCode-'+x.id);if(!el)return;el.innerHTML='';if(typeof QRCode==='undefined'){el.innerHTML='<div class="note">QR-Bibliothek konnte nicht geladen werden. Internetverbindung prüfen.</div>';return}new QRCode(el,{text:x.id,width:180,height:180,correctLevel:QRCode.CorrectLevel.M});}
+function openMoistureFromQr(id){document.getElementById('moistBatch').value=id;document.getElementById('moistValue').focus();document.querySelector('nav button[data-tab="moisture"]').click();}
+function openSaleFromQr(id){document.querySelector('nav button[data-tab="sales"]').click();document.getElementById('saleBatch').value=id;setSaleDefaults(true);document.getElementById('saleQty').focus()}
+function printQr(id){let x=stock.find(a=>a.id===id);if(!x)return;printLabels([x]);}
+function printAllQr(){if(!stock.length)return alert('Noch keine Chargen vorhanden.');printLabels(stock);}
+function printLabels(items){
+  let w=window.open('','_blank','width=900,height=700');
+  if(!w)return alert('Bitte Pop-up für den Druck erlauben.');
+  const names=typeof qrNames==='function'?qrNames():{};
+  let labels=items.map(x=>{
+    const displayName=names[x.id]||x.id;
+    const qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(x.id);
+    return `<div class="label"><div class="wood">🪵 ${displayName}</div><div>${x.wood} – ${x.length}</div><img class="qr" src="${qrUrl}" alt="QR ${x.id}"><div class="id">${x.id}</div><div class="small">Bestand: ${fmt(x.qty)} SRM · Feuchte: ${x.moist??'–'} %</div></div>`;
+  }).join('');
+  const doc='<!doctype html><html lang="de"><head><meta charset="utf-8"><title>QR-Etiketten – Brennholz Wolf</title><style>@page{size:A4;margin:10mm}body{font-family:Arial;margin:0}.sheet{display:grid;grid-template-columns:repeat(2,1fr);gap:10mm}.label{border:1px solid #222;border-radius:8px;padding:8mm;text-align:center;min-height:75mm;break-inside:avoid}.wood{font-weight:800;font-size:18px;margin-bottom:2mm}.qr{width:150px;height:150px;display:block;margin:5mm auto}.id{font-size:15px;font-weight:800;margin-top:4mm}.small{font-size:11px;margin-top:2mm}@media print{.label{border:1px solid #000}}</style></head><body><div class="sheet">'+labels+'</div></body></html>';
+  w.document.open(); w.document.write(doc); w.document.close();
+  setTimeout(()=>w.print(),1000);
+}
+
+async function startScanner(){if(scanner)return;try{if(!window.Html5Qrcode){await loadScript('https://unpkg.com/html5-qrcode');}scanner=new Html5Qrcode('reader');await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:250}},txt=>{let raw=txt.trim();let x=stock.find(a=>a.id===raw);if(!x&&raw.startsWith('BRENNHOLZ-WOLF|')){let id=raw.split('|')[1];x=stock.find(a=>a.id===id)}if(x){document.getElementById('qrBatch').value=x.id;showQrCharge();stopScanner()}else alert('QR-Code erkannt, aber keine passende Charge: '+txt)});}catch(e){alert('Kamera konnte nicht gestartet werden. Nutze HTTPS/localhost und erlaube den Kamerazugriff.');scanner=null}}
+async function stopScanner(){if(scanner){try{await scanner.stop();}catch(e){}scanner.clear();scanner=null}}
+function loadScript(src){return new Promise((res,rej)=>{let s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+setDeliveryDefaultDate();
+render();
+
+function getBatchId(x){
+  return x.batch || x.charge || x.batchId || x.id || ('CHARGE-'+Math.random().toString(36).slice(2,8).toUpperCase());
+}
+function qrNames(){return JSON.parse(localStorage.getItem('bw_qr_names')||'{}');}
+function renameQR(code){
+  const names=qrNames();
+  const old=names[code]||code;
+  const n=prompt('Name für diesen QR-Code:',old);
+  if(n===null)return;
+  const clean=n.trim();
+  if(clean) names[code]=clean; else delete names[code];
+  localStorage.setItem('bw_qr_names',JSON.stringify(names));
+  renderQRLabels();
+}
+function printSingleQR(code){
+  const x=stock.find(a=>getBatchId(a)===code);
+  if(!x)return alert('Charge nicht gefunden.');
+  const names=qrNames();
+  const displayName=names[code]||code;
+  const wood=x.wood||x.type||x.holz||'Holz';
+  const len=x.length||x.len||x.laenge||'';
+  const loc=x.location||x.place||x.lagerort||'';
+  const qty=x.qty??x.quantity??x.amount??x.srm??'';
+  const qr=`https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(code)}`;
+  const w=window.open('','_blank','width=520,height=700');
+  if(!w)return alert('Bitte Pop-ups für diese Seite erlauben.');
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${displayName}</title>
+  <style>body{font-family:Arial,sans-serif;text-align:center;padding:25px}.label{border:2px solid #111;border-radius:14px;padding:20px;display:inline-block;min-width:300px}.name{font-size:26px;font-weight:800}.code{font-size:12px;color:#666;margin:4px 0 12px}img{width:260px;height:260px}.info{font-size:18px;margin:5px}@media print{button{display:none}}</style>
+  </head><body><div class="label"><div class="name">${displayName}</div><div class="code">Code: ${code}</div><div class="info"><b>${wood}</b>${len?' · '+len+' cm':''}</div>${loc?`<div class="info">${loc}</div>`:''}${qty!==''?`<div class="info">Bestand: ${qty} SRM</div>`:''}<img src="${qr}" onload="setTimeout(()=>window.print(),250)"><div>Scannen → Charge öffnen</div></div></body></html>`);
+  w.document.close();
+}
+function renderQRLabels(){
+  const grid=document.getElementById('qrLabelGrid');
+  if(!grid) return;
+  const arr=(typeof stock!=='undefined'&&Array.isArray(stock))?stock:[];
+  if(!arr.length){grid.innerHTML='<div class="card">Noch keine Holz-Chargen vorhanden.</div>';return;}
+  const names=qrNames();
+  grid.innerHTML=arr.map((x,i)=>{
+    const id=getBatchId(x);
+    const displayName=names[id]||id;
+    const wood=x.wood||x.type||x.holz||'Holz';
+    const len=x.length||x.len||x.laenge||'';
+    const loc=x.location||x.place||x.lagerort||'';
+    const qty=x.qty??x.quantity??x.amount??x.srm??'';
+    const payload=encodeURIComponent(id);
+    return `<div class="qr-label">
+      <div class="batch">${displayName}</div>
+      <div style="font-size:11px;color:#777">Code: ${id}</div>
+      <div><b>${wood}</b>${len?' · '+len+' cm':''}</div>
+      ${loc?`<div>${loc}</div>`:''}
+      ${qty!==''?`<div>Bestand: ${qty} SRM</div>`:''}
+      <img alt="QR ${id}" src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${payload}">
+      <div style="font-size:12px">Scannen → Charge öffnen</div>
+      <div class="actions no-print" style="justify-content:center;margin-top:10px">
+        <button class="secondary" onclick='renameQR(${JSON.stringify(id)})'>✏️ Name ändern</button>
+        <button class="primary" onclick='printSingleQR(${JSON.stringify(id)})'>🖨️ Diesen QR drucken</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest && e.target.closest('[data-tab="labels"]');
+  if(b) setTimeout(renderQRLabels,50);
+});
+
+</script>
+<script>if('serviceWorker' in navigator&&location.protocol!=='file:'){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}</script><script>
+const BW_URL='https://iwucfcwvbhapylbnwvah.supabase.co';
+const BW_KEY='sb_publishable_vpwKD1vXcybOafvowRc_dQ_RA8yCvPE';
+const BW_SK='bw_session_v9';
+let bwSession=null,bwUser=null,bwCloudReady=false,bwSyncBusy=false;
+function bwSetStatus(t){const e=document.getElementById('cloudStatus');if(e)e.textContent=t}
+async function bwReq(path,opt={},timeout=12000){
+ const c=new AbortController(),tm=setTimeout(()=>c.abort(),timeout);
+ try{
+  const r=await fetch(BW_URL+path,{...opt,signal:c.signal});
+  const tx=await r.text();let d=null;try{d=tx?JSON.parse(tx):null}catch{d=tx}
+  if(!r.ok)throw new Error(d?.msg||d?.message||d?.error_description||('HTTP '+r.status));
+  return d
+ }catch(e){if(e.name==='AbortError')throw new Error('Verbindung zu Supabase dauert zu lange.');throw e}
+ finally{clearTimeout(tm)}
+}
+function bwHdr(extra={}){return {'apikey':BW_KEY,'Authorization':'Bearer '+(bwSession?.access_token||BW_KEY),'Content-Type':'application/json',...extra}}
+async function bwRest(t,q='',opt={}){return bwReq('/rest/v1/'+t+(q?'?'+q:''),{...opt,headers:bwHdr(opt.headers||{})},15000)}
+let bwRecoveryToken=null;
+function bwShowRecovery(message){
+ document.getElementById('recoveryForm').style.display='block';
+ document.getElementById('loginError').textContent=message||'Bitte neues Passwort eingeben.';
+}
+async function bwHandleRecoveryLink(){
+ const fragment=new URLSearchParams(location.hash.slice(1));
+ const query=new URLSearchParams(location.search);
+ const type=fragment.get('type')||query.get('type');
+ const error=fragment.get('error_description')||query.get('error_description');
+ if(error){document.getElementById('loginError').textContent='Link ungültig oder abgelaufen: '+error;return true}
+ if(type!=='recovery')return false;
+ // Einmalige Recovery-Links nicht in der Adresszeile stehen lassen.
+ const accessToken=fragment.get('access_token');
+ const tokenHash=query.get('token_hash');
+ try{
+  if(accessToken){bwRecoveryToken=accessToken}
+  else if(tokenHash){
+   const data=await bwReq('/auth/v1/verify',{method:'POST',headers:{'apikey':BW_KEY,'Content-Type':'application/json'},body:JSON.stringify({token_hash:tokenHash,type:'recovery'})});
+   bwRecoveryToken=data.access_token;
+  }
+  history.replaceState(null,'',location.pathname);
+  if(!bwRecoveryToken)throw new Error('Im Link fehlt ein gültiger Wiederherstellungs-Token.');
+  bwShowRecovery('Link bestätigt. Bitte neues Passwort festlegen.');
+ }catch(e){bwRecoveryToken=null;bwShowRecovery('Passwort-Link konnte nicht geprüft werden: '+e.message)}
+ return true;
+}
+async function bwUpdatePassword(){
+ const msg=document.getElementById('loginError');
+ const p=document.getElementById('newPassword').value,repeat=document.getElementById('newPasswordRepeat').value;
+ if(!bwRecoveryToken){msg.textContent='Bitte einen neuen Passwort-Link anfordern.';return}
+ if(p.length<8){msg.textContent='Mindestens 8 Zeichen eingeben.';return}
+ if(p!==repeat){msg.textContent='Die Passwörter stimmen nicht überein.';return}
+ msg.textContent='Passwort wird gespeichert…';
+ try{
+  await bwReq('/auth/v1/user',{method:'PUT',headers:{'apikey':BW_KEY,'Authorization':'Bearer '+bwRecoveryToken,'Content-Type':'application/json'},body:JSON.stringify({password:p})});
+  bwRecoveryToken=null;document.getElementById('newPassword').value='';document.getElementById('newPasswordRepeat').value='';
+  document.getElementById('recoveryForm').style.display='none';
+  document.getElementById('loginPassword').value='';
+  msg.textContent='Passwort gespeichert. Du kannst dich jetzt mit deinem neuen Passwort anmelden.';
+ }catch(e){msg.textContent='Passwort konnte nicht geändert werden: '+e.message}
+}
+async function bwRequestRecovery(){
+ const msg=document.getElementById('loginError');
+ const email=document.getElementById('loginEmail').value.trim();
+ if(!email){msg.textContent='Bitte oben zuerst deine E-Mail-Adresse eingeben.';return}
+ msg.textContent='Passwort-Mail wird angefordert…';
+ try{
+  await bwReq('/auth/v1/recover?redirect_to='+encodeURIComponent(location.origin+location.pathname),{method:'POST',headers:{'apikey':BW_KEY,'Content-Type':'application/json'},body:JSON.stringify({email})});
+  msg.textContent='Falls das Konto existiert, erhältst du eine E-Mail. Bitte den Link öffnen.';
+ }catch(e){msg.textContent='Passwort-Mail konnte nicht angefordert werden: '+e.message}
+}
+async function bwLogin(){
+ const msg=document.getElementById('loginError'),email=document.getElementById('loginEmail').value.trim(),password=document.getElementById('loginPassword').value;
+ if(!email||!password){msg.textContent='Bitte E-Mail und Passwort eingeben.';return}
+ msg.textContent='Anmeldung läuft…';
+ try{
+  bwSession=await bwReq('/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':BW_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+  bwUser=bwSession.user;localStorage.setItem(BW_SK,JSON.stringify(bwSession));
+  msg.textContent='Angemeldet. Daten werden geladen…';await bwAfterLogin();msg.textContent=''
+ }catch(e){msg.textContent='Fehler: '+e.message}
+}
+async function bwInit(){
+ try{
+  const x=localStorage.getItem(BW_SK);if(!x)return;
+  const old=JSON.parse(x);
+  bwSession=await bwReq('/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':BW_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:old.refresh_token})});
+  bwUser=bwSession.user;localStorage.setItem(BW_SK,JSON.stringify(bwSession));await bwAfterLogin()
+ }catch(e){localStorage.removeItem(BW_SK)}
+}
+function bwLogout(){localStorage.removeItem(BW_SK);location.reload()}
+async function bwAfterLogin(){
+ document.getElementById('loginGate').style.display='none';document.getElementById('cloudBar').style.display='block';bwSetStatus('Angemeldet · Daten werden geladen');
+ await bwLoadCloud();bwCloudReady=true;bwSetStatus('Synchronisiert')
+}
+async function bwLoadCloud(){
+ try{
+  bwSetStatus('Lade Bestand…');
+  const c=await bwRest('charges','select=*&order=created_at.asc');
+  bwSetStatus('Lade Feuchte…');
+  const f=await bwRest('feuchtemessungen','select=*&order=gemessen_am.asc');
+  bwSetStatus('Lade Verkäufe…');
+  const m=await bwRest('bestandsbewegungen','select=*&order=datum.desc');
+  bwSetStatus('Lade Liefertermine…');
+  const l=await bwRest('liefertermine','select=*&order=datum.asc');
+
+  if(c?.length)stock=c.map(x=>({id:x.charge_code,cloudId:x.id,wood:x.holzart,length:x.scheitlaenge_cm?x.scheitlaenge_cm+' cm':'',qty:Number(x.menge_srm||0),moist:x.feuchte==null?null:Number(x.feuchte),place:x.lagerort||'',price:Number(x.verkaufspreis_srm||0),cost:Number(x.einkaufspreis_srm||0),history:(f||[]).filter(h=>h.charge_id===x.id).map(h=>({date:h.gemessen_am,value:Number(h.feuchte)}))}));
+  if(m?.length){const ids=Object.fromEntries(stock.filter(x=>x.cloudId).map(x=>[x.cloudId,x.id]));moves=m.map(x=>{let qty=Number(x.menge_srm),income=Number(x.einnahme||0);return{date:x.datum,id:ids[x.charge_id]||'',type:x.art==='rein'?'in':'out',qty,income,salePricePerSrm:qty?income/qty:0,costPerSrm:Number(x.einkaufspreis_srm||0),note:x.notiz||''}})}
+  if(l?.length)deliveries=l.map(x=>({id:x.id,customer:x.kunde||'',date:x.datum||'',time:(x.uhrzeit||'').slice(0,5),address:x.adresse||'',phone:x.telefon||'',wood:[x.holzart,x.scheitlaenge_cm?x.scheitlaenge_cm+' cm':''].filter(Boolean).join(' '),qty:x.menge_srm==null?null:Number(x.menge_srm),status:x.status||'offen',note:x.notiz||'',created:x.created_at}));
+
+  if((!c||!c.length)&&stock.length){
+   bwSetStatus('Lokale Daten erkannt – automatischer Upload deaktiviert (Schutzmodus).');
+  }
+  if(typeof save==='function')save();else if(typeof render==='function')render();
+  bwSetStatus('Synchronisiert');
+ }catch(e){
+  bwSetStatus('Ladefehler: '+e.message);
+  throw e;
+ }
+}
+function bwLen(v){const m=String(v||'').match(/(\d+)/);return m?Number(m[1]):null}
+// Schutzmodus (Version 19.1): Automatische Synchronisierung deaktiviert.
+// Die alte bwSyncCloud() hat beim Speichern komplette Tabellen (feuchtemessungen,
+// bestandsbewegungen, liefertermine) per DELETE ALL geleert und neu geschrieben.
+// Bei einem Fehler zwischen DELETE und INSERT waren die Daten unwiederbringlich weg.
+// Außerdem wurden Cloud-Zeilen gelöscht, die lokal gerade nicht vorhanden waren
+// (Mehrgeräte-Problem). Beides ist entfernt. Schreiben in die bestehende Datenbank
+// findet erst wieder statt, wenn eine gezielte, transaktionssichere Upsert-Logik
+// mit stabilen IDs und nutzerspezifischem Row-Level-Security aktiviert wird.
+async function bwSyncCloud(force=false){
+ if(!bwSession||!bwUser) return;
+ if(!force){ bwSetStatus('Synchronisierung deaktiviert (Schutzmodus)'); return; }
+ bwSyncBusy=true; bwSetStatus('Upload vorbereitet… (nur Upsert, kein Löschen)');
+ try{
+  bwSetStatus('Sicherheitsmodus aktiv – es wird nichts gelöscht.');
+ }catch(e){ bwSetStatus('Hinweis: '+e.message); }finally{ bwSyncBusy=false; }
+}
+window.addEventListener('load',async()=>{if(!await bwHandleRecoveryLink())bwInit();const t=setInterval(()=>{if(typeof window.save==='function'&&!window.__bwSaveWrapped){clearInterval(t);window.__bwSaveWrapped=true;const old=window.save;window.save=function(){const r=old.apply(this,arguments);return r}}},100)});
+</script></body></html>
